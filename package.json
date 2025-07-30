@@ -1,0 +1,27 @@
+{
+  "name": "totalcompensation",
+  "version": "1.0.0",
+  "description": "Thank you for taking time to consider eBacon as your next development home! As part of our interview process, we ask that you do one, or more, of our tests inside of this repo. Then show us your answers during your second and third round of interviews. During the interview you will be asked to clearly explain how you solved the problem.",
+  "homepage": "https://github.com/javapak/InterviewQuestions#readme",
+  "bugs": {
+    "url": "https://github.com/javapak/InterviewQuestions/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/javapak/InterviewQuestions.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "out/TotalCompensation.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install+build+run": ""
+  },
+  "dependencies": {
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0"
+  }
+}

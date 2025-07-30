@@ -2,6 +2,11 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import CombinedData, { EmployeeData, JobData, TimePunch } from './types';
 
+/*
+I am going to try to break any utilities and steps down
+into small, readable functions/methods as this often encourages 
+better understanding for others and also allows things to be reused relatively easily.
+*/
 
 function stripJsonC(): CombinedData {
     /* 
@@ -26,6 +31,18 @@ function totalHrsFromTp(timePunch: TimePunch): number {
     return ((((endDate.getTime() - startDate.getTime()) / 1000) / 60) / 60);
 }
 
+function totalHoursPerJobTitle(timePunchCollection: [TimePunch]) {
+    const jobHoursMap: Record<string, number> = {}
+    timePunchCollection.forEach((timePunchEntry) => {
+        // Have to make sure these aren't undefined before using += operator otherwise you'll run into NaN assignment and return.
+        if (!jobHoursMap[timePunchEntry.job]) jobHoursMap[timePunchEntry.job] = totalHrsFromTp(timePunchEntry);
+        else jobHoursMap[timePunchEntry.job] += totalHrsFromTp(timePunchEntry);
+    });
+    return jobHoursMap;
+}
+
+
+
 function mapRatesToJobTitle(jobMeta: [JobData]): Record<string, Partial<JobData>> {
     /* 
     while you could use .find or iterate through jobMeta array 
@@ -35,10 +52,16 @@ function mapRatesToJobTitle(jobMeta: [JobData]): Record<string, Partial<JobData>
     i know this is probably a bit much given the number of elements in the array,
     but with a lot of data it would matter (: 
     */
+    const jobsDataMap: Record<string, Partial<JobData>> = {};
+    jobMeta.forEach((val: JobData) => {
+        jobsDataMap[val.job] = {rate: val.rate, benefitsRate: val.benefitsRate};
+    });
 
+    return jobsDataMap
     
-
 }
 
 
-console.log(JSON.stringify(stripJsonC().employeeData[0]));
+
+
+console.log(totalHoursPerJobTitle(stripJsonC().employeeData[0].timePunch));

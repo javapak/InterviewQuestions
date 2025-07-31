@@ -28,7 +28,8 @@ function totalHrsFromTp(timePunch: TimePunch): number {
     division operations derived from standard unit conversion:
     1000 ms in 1s, 60 seconds in 1 minute, 60 minutes in 1 hour... 
     */
-    return ((((endDate.getTime() - startDate.getTime()) / 1000) / 60) / 60);
+    return ((((endDate.getTime() - startDate.getTime()) / 1000) / 60) / 60); 
+    // I guess you could simplify this by: 1000 * 60 * 60 = 3600000 but I find that to be less readable
 }
 
 function totalHoursCountTrackOvertime(timePunchCollection: [TimePunch]) {
@@ -95,7 +96,52 @@ jobAlias: string
     return existingTotals;
 }
 
-function clasifyHourType() {
+function calculateNormalHoursAndOverSpill(currentTotal: number, timePunchHours: number) {
+    const classifiedHours = {normal: 0, overtime: 0, doubletime: 0 }
+    const difference = (currentTotal + timePunchHours) - 40
+    if (currentTotal + timePunchHours > 40) {
+        if (difference > 8) {
+            classifiedHours.overtime = 8 - difference;
+            classifiedHours.doubletime = difference - 8;
+            classifiedHours.normal = difference - classifiedHours.doubletime - classifiedHours.overtime
+            return classifiedHours;
+        }
+        classifiedHours.overtime = difference;
+        classifiedHours.normal = timePunchHours - difference;
+    }
+    return classifiedHours;
+}
+
+function calculateOvertimeHoursAndOverSpill(currentTotal: number, punchTimeHours: number) {
+    // this function is effectively the same as the above but since we know we have gone over 40 total we skip any normal hr calc...
+    const classifiedHours = {normal: 0, overtime: 0, doubletime: 0 } // just for consistency i am still populating the key for normal.
+    const difference = (currentTotal + punchTimeHours) - 48
+    if ((currentTotal + punchTimeHours) > 48) {
+        classifiedHours.doubletime = difference;
+        classifiedHours.overtime = punchTimeHours - difference;
+        return classifiedHours;
+    }
+    classifiedHours.overtime = punchTimeHours;
+    return classifiedHours;
+}
+
+function clasifyHourType(currentTotal: number, timePunchHours: number): {normal: number, overtime: number, doubletime: number} {
+    var classifiedHours = {normal: 0, overtime: 0, doubletime: 0}
+    if (currentTotal <= 40) {
+        const classifiedGroup = calculateNormalHoursAndOverSpill(currentTotal, timePunchHours);
+        classifiedHours = classifiedGroup;
+        return classifiedHours;
+    }
+    else if (currentTotal > 40 && currentTotal <= 48) {
+        const classifiedGroup = calculateOvertimeHoursAndOverSpill(currentTotal, timePunchHours);
+        classifiedHours = classifiedGroup;
+        return classifiedHours;
+    }
+    else if (currentTotal > 48) {
+        classifiedHours.doubletime = timePunchHours;
+    }
+
+    return classifiedHours;
 
 }
 

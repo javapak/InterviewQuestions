@@ -31,17 +31,73 @@ function totalHrsFromTp(timePunch: TimePunch): number {
     return ((((endDate.getTime() - startDate.getTime()) / 1000) / 60) / 60);
 }
 
-function totalHoursPerJobTitle(timePunchCollection: [TimePunch]) {
-    const jobHoursMap: Record<string, number> = {}
+function totalHoursCountTrackOvertime(timePunchCollection: [TimePunch]) {
+    var overtimeHours = 0;
+    var doubleTimeHours = 0;
+    var normalHours = 0;
+    var total = 0;
+    const nonOverTimeValues: Record<string, number> = {} // At or  below 40 hour maximum.
+    const timeAndAHalfValues: Record<string, number> = {} // At or below 48 hour maximum.
+    const doubleTimeValues: Record<string, number> = {} // Exceeds 48 hour maximum.
+
     timePunchCollection.forEach((timePunchEntry) => {
-        // Have to make sure these aren't undefined before using += operator otherwise you'll run into NaN assignment and return.
-        if (!jobHoursMap[timePunchEntry.job]) jobHoursMap[timePunchEntry.job] = totalHrsFromTp(timePunchEntry);
-        else jobHoursMap[timePunchEntry.job] += totalHrsFromTp(timePunchEntry);
-    });
-    return jobHoursMap;
+        if (!nonOverTimeValues[timePunchEntry.job]) { 
+            // we can go ahead and initialize for all if we find that a specific key for a job doesn't exist to avoid errors.
+            nonOverTimeValues[timePunchEntry.job] = 0;
+            timeAndAHalfValues[timePunchEntry.job] = 0;
+            doubleTimeValues[timePunchEntry.job] = 0
+        }
+ 
+        const currentCardHours = totalHrsFromTp(timePunchEntry);
+        total += currentCardHours;
+        
+        if (total <= 40) {
+            if ((normalHours + currentCardHours ) <= 40) {
+            normalHours += currentCardHours;
+            nonOverTimeValues[timePunchEntry.job] += currentCardHours;
+            }
+            else {
+                const difference = (normalHours + currentCardHours) - 40
+                overtimeHours += difference;
+                normalHours += currentCardHours - difference;
+                nonOverTimeValues[timePunchEntry.job] += normalHours;
+                timeAndAHalfValues[timePunchEntry.job] += difference;
+
+            }
+        }
+
+        
+        else if (total > 40 && total <= 48) {
+            timeAndAHalfValues[timePunchEntry.job] += currentCardHours;
+            overtimeHours += currentCardHours;
+        }
+
+        else {
+            doubleTimeValues[timePunchEntry.job] += currentCardHours;
+
+        }
+    }
+    )
 }
 
 
+
+function createRecordForJob(existingTotals: 
+Record<string, {normal: number, overtime: number, doubletime: number}>,
+jobAlias: string
+): Record<string, {normal: number, overtime: number, doubletime: number }> {
+    if (!existingTotals[jobAlias]) {
+        return {
+            ...existingTotals,
+            [jobAlias]: { normal: 0, overtime: 0, doubletime: 0 }
+        }
+    }
+    return existingTotals;
+}
+
+function clasifyHourType() {
+
+}
 
 function mapRatesToJobTitle(jobMeta: [JobData]): Record<string, Partial<JobData>> {
     /* 
@@ -62,6 +118,7 @@ function mapRatesToJobTitle(jobMeta: [JobData]): Record<string, Partial<JobData>
 }
 
 
-
-
-console.log(totalHoursPerJobTitle(stripJsonC().employeeData[0].timePunch));
+const root = stripJsonC();
+const employeeObject = {};
+employeeObject[root.employeeData[0].employee] = totalHoursCountTrackOvertime(root.employeeData[0].timePunch);
+console.log();

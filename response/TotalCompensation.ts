@@ -21,17 +21,32 @@ function stripJsonC(): CombinedData {
 }
 
 
-
 function enterCalculationStart() {
     const root = stripJsonC();
+    const ratesMap = mapRatesToJobTitle(root.jobMeta);
+    const calculationsMap: Record<string, {employee: string, regular: number, overtime: number, doubletime: number }> = {}
     root.employeeData.forEach((record) => {
-        const jobRecordsMap: Record<string, {normal: number, overtime: number, doubletime: number}> = {};
+        var jobRecordsMap: Record<string, {normal: number, overtime: number, doubletime: number}> = {};
+        var currentTotal = 0;
         record.timePunch.forEach((timePunch) => {
+            jobRecordsMap = createRecordForJob(jobRecordsMap ,timePunch.job);
+            const totalHrs = totalHrsFromTp(timePunch);
+            const classifiedHours = classifyHourType(currentTotal, totalHrs);
+
+            jobRecordsMap[timePunch.job].normal += classifiedHours.normal;
+            jobRecordsMap[timePunch.job].overtime += classifiedHours.overtime;
+            jobRecordsMap[timePunch.job].doubletime += classifiedHours.doubletime;
+            
+            currentTotal += totalHrs;
 
         });
+        calculationsMap[record.employee] = {employee: record.employee, ...calculateTotals(jobRecordsMap, ratesMap)};
+        
+        
     });
 
-
+    // Looks right to me aside from the typical floating point discrepancies that may occur!
+    console.log(JSON.stringify(calculationsMap, null, 2));
 }
 
 function createRecordForJob(existingTotals: 
@@ -51,11 +66,15 @@ function calculateNormalHoursAndOverSpill(currentTotal: number, timePunchHours: 
     // This one is actually kind of tricky!!! There is probably a more optimal way to write this admittedly. The less cases of overspill the less confusing though.
     const classifiedHours = {normal: 0, overtime: 0, doubletime: 0 }
     const difference = (currentTotal + timePunchHours) - 40
+    if (currentTotal + timePunchHours <= 40) {
+        classifiedHours.normal = timePunchHours;
+        return classifiedHours;
+    }
     if (currentTotal + timePunchHours > 40) {
         if (difference > 8) {
             classifiedHours.overtime = 8;
             classifiedHours.normal = 40 - currentTotal;
-            classifiedHours.doubletime = timePunchHours - classifiedHours.normal - classifiedHours.doubletime;
+            classifiedHours.doubletime = timePunchHours - classifiedHours.normal - classifiedHours.overtime;
             return classifiedHours;
         }
         classifiedHours.normal = 40 - currentTotal;
@@ -77,7 +96,7 @@ function calculateOvertimeHoursAndOverSpill(currentTotal: number, punchTimeHours
     return classifiedHours;
 }
 
-function clasifyHourType(currentTotal: number, timePunchHours: number): {normal: number, overtime: number, doubletime: number} {
+function classifyHourType(currentTotal: number, timePunchHours: number): {normal: number, overtime: number, doubletime: number} {
     var classifiedHours = {normal: 0, overtime: 0, doubletime: 0}
     if (currentTotal <= 40) {
         const classifiedGroup = calculateNormalHoursAndOverSpill(currentTotal, timePunchHours);
@@ -95,6 +114,39 @@ function clasifyHourType(currentTotal: number, timePunchHours: number): {normal:
 
     return classifiedHours;
 
+}
+
+function calculateTotals(jobRecordsMap: Record<string, {normal: number, overtime: number, doubletime: number}>, 
+    ratesMap: Record<string, Partial<JobData>>): {wageTotal: number, benefitTotal: number, doubletime: number, regular: number, overtime: number} {
+    const jobsWorked = Object.keys(jobRecordsMap);
+    var benefitTotal = 0, wageTotal = 0, overtime = 0, regular = 0, doubletime = 0; // had been referring to "regular" hours as "normal", so i fix it here. 
+    
+    jobsWorked.forEach((jobTitle) => {
+        const jobPayRate = ratesMap[jobTitle].rate;
+        const jobBenefitsRate = ratesMap[jobTitle].benefitsRate;
+        regular += jobRecordsMap[jobTitle].normal;
+        overtime += jobRecordsMap[jobTitle].overtime;
+        doubletime += jobRecordsMap[jobTitle].doubletime;
+        const allHoursWorkedForJob = jobRecordsMap[jobTitle].normal + jobRecordsMap[jobTitle].overtime + jobRecordsMap[jobTitle].doubletime;
+
+        if (jobBenefitsRate && jobPayRate) {
+            benefitTotal += allHoursWorkedForJob * jobBenefitsRate;
+            wageTotal += (jobRecordsMap[jobTitle].normal * jobPayRate) + (jobRecordsMap[jobTitle].overtime * (jobPayRate * 1.5)) + (jobRecordsMap[jobTitle].doubletime * (jobPayRate * 2));
+        }
+    });
+    return { benefitTotal, wageTotal, overtime, doubletime, regular };
+
+}
+
+function totalHrsFromTp(timePunch: TimePunch): number {
+    const startDate = new Date(timePunch.start);
+    const endDate = new Date(timePunch.end);
+    /* 
+    getTime() returns a milisecond value of time elapsed from Jan 1, 1970 UTC
+    division operations derived from standard unit conversion:
+    1000 ms in 1s, 60 seconds in 1 minute, 60 minutes in 1 hour... 
+    */
+    return ((((endDate.getTime() - startDate.getTime()) / 1000) / 60) / 60);
 }
 
 function mapRatesToJobTitle(jobMeta: [JobData]): Record<string, Partial<JobData>> {
@@ -116,7 +168,6 @@ function mapRatesToJobTitle(jobMeta: [JobData]): Record<string, Partial<JobData>
 }
 
 
-const root = stripJsonC();
-const employeeObject = {};
-employeeObject[root.employeeData[0].employee] = totalHoursCountTrackOvertime(root.employeeData[0].timePunch);
-console.log();
+
+
+enterCalculationStart();

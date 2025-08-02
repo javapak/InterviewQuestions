@@ -1,7 +1,11 @@
 # Interview Questions for eBacon
 
 ## Running the solution
-Just make sure you have Node LTS installed and then navigate to the root of this repository and execute "npm run setup-run", which should npm i (or install) and then compile "response/TotalCompensation.ts" and execute the emitted js using ts-node. "npm run dev" will skip the npm i and only compile 
+1. Install Node.js LTS if you do not have it (22.18.0 at the time of writing). Previous versions should be ok too though. (https://nodejs.org/en/download)
+2. Navigate to the root (same level as package.json) of this repository after clone.
+3. For first time, execute "npm run setup-run" which execs "npm i && ts-node response/TotalCompensation.ts" as defined in package.json
+4. Any subsequent execution can be done with "npm run dev" so you are not running npm i every single time you execute. 
+
 ## About This document
 Thank you for taking time to consider eBacon as your next development home! As part of our interview process, we ask that you do one, or more, of our tests inside of this repo. Then show us your answers during your second and third round of interviews. During the interview you will be asked to clearly explain how you solved the problem.
 
